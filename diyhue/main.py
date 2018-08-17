@@ -1,6 +1,8 @@
 # TODO: imports
+from diyhue.config import ConfigHandler
 
-# TODO: load config
+# TODO: get args
+bridge_config = ConfigHandler(filename='/opt/hue-emulator/config.json')
 
 updateConfig()
 if bridge_config["deconz"]["enabled"]:
