@@ -1,9 +1,15 @@
+"""
+BridgeConfig
+"""
+
 import json
 import sys
 
-class StateHandler(object):
+from .confighandler import ConfigHandler
+
+class BridgeConfig(ConfigHandler):
 	"""
-	Loads state from config, handles state access, saves state to config.
+	Loads config, handles state access, saves state to config.
 	"""
 	def __init__(self, filename='/opt/hue-emulator/config.json'):
 		self.filename = filename
