@@ -3,8 +3,13 @@ from threading import Thread
 from diyhue.config import ConfigHandler
 
 class WSClientThread(Thread):
-	def __init__(self, host="127.0.0.1", port=1337):
+	def __init__(self, host="127.0.0.1", port=1337, callbacks={}):
 		self.alive = False
+
+		if type(callbacks) is not dict:
+			raise ValueError('Callbacks must be a dictionary of key:functions')
+		
+		self.set_callbacks(callbacks)
 
 		self._host = host
 		self._port = port
@@ -13,14 +18,22 @@ class WSClientThread(Thread):
 	def run(self):
 		self.connect()
 
+	def set_callbacks(self, callbacks):
+		self.on_error = callbacks['on_error'] if ('on_error' in callbacks) else self._on_error
+		self.on_message = callbacks['on_message'] if ('on_message' in callbacks) else self._on_message
+		self.on_close = callbacks['on_close'] if ('on_close' in callbacks) else self._on_close
+		self.on_open = callbacks['on_open'] if ('on_open' in callbacks) else self._on_open
+
 	def connect(self):
         #websocket.enableTrace(True)
-        ws = websocket.WebSocketApp("ws://%s:%s"%(self._host, self._port),
-        on_message = self._on_message,
-        on_error = self._on_error,
-        on_close = self._on_close)
-        ws.on_open = self._on_open
-        ws.run_forever()
+        self._socket = websocket.WebSocketApp("ws://{host}:{port}"
+        			.format(host=self._host,port=self._port),
+        			on_message = self.on_message,
+        			on_error = self.on_error,
+        			on_close = self.on_close)
+
+        self._socket.on_open = self.on_open
+        self._socket.run_forever()
 
     def _on_error(self, ws, message):
         self.logger.error("Error callback fired, message: %s"%message)
