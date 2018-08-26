@@ -1,1 +1,2 @@
-from config_handler import ConfigHandler
+from .confighandler import ConfigHandler
+from .bridgeconfig import BridgeConfig

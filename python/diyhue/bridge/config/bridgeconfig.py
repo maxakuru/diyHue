@@ -12,6 +12,8 @@ class BridgeConfig(ConfigHandler):
 	Loads config, handles state access, saves state to config.
 	"""
 	def __init__(self, filename='/opt/hue-emulator/config.json'):
+		super().__init__()
+		
 		self.filename = filename
 
 		self._state = {}
@@ -29,7 +31,7 @@ class BridgeConfig(ConfigHandler):
 	def dirty(self, val):
 		self._dirty = val
 
-	def update_config(self):
+	def update(self):
 		"""
 		Update config.
 		"""
@@ -43,16 +45,20 @@ class BridgeConfig(ConfigHandler):
 			if self._state["sensors"][sensor]["type"] == "CLIPGenericStatus":
 				self._state["sensors"][sensor]["state"]["status"] = 0
 
-	def save_config(self, filename=None):
+	def save(self, filename=None):
 		"""
 		Save config to file.
 		"""
+
+		# TODO: spawn thread to do save,
+		# 		catch sigterms and force save
+
 		if not filename:
 			filename = self.filename
 		with open(filename, 'w') as fp:
 			json.dump(config, fp, sort_keys=True, indent=4, separators=(',', ': '))
 
-	def load_config(self, filename=None):
+	def load(self, filename=None):
 		"""
 		Load config from file.
 		"""

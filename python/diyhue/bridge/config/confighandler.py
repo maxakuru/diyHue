@@ -10,9 +10,9 @@ class ConfigHandler(dict):
 		elif type(kwargs['filename']) is not str:
 			raise ValueError('Filename must be of type str.')
 
-		self.filename = kwards['filename']
+		self.filename = kwargs['filename']
 
-		self.__update(*args, **kwds)
+		self.__update(*args, **kwargs)
 
 	@property
 	def state(self):

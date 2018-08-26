@@ -1,28 +1,31 @@
 # TODO: imports
-from diyhue.config import ConfigHandler
+from diyhue.bridge.config import BridgeConfig
+from diyhue.bridge.emulator import BridgeEmulator
+from diyhue.bridge.utils import get_mac, get_ip
 
-# TODO: get args
-bridge_config = ConfigHandler(filename='/opt/hue-emulator/config.json')
+def start(*args, **kwargs):
+    # get IP and mac
+    ip = get_ip()
+    mac = get_mac()
 
-updateConfig()
-if bridge_config["deconz"]["enabled"]:
-    scanDeconz()
-try:
-    if update_lights_on_startup:
-        updateAllLights()
-    Thread(target=ssdpSearch, args=[getIpAddress(), mac]).start()
-    Thread(target=ssdpBroadcast, args=[getIpAddress(), mac]).start()
-    Thread(target=schedulerProcessor).start()
-    Thread(target=syncWithLights).start()
-    Thread(target=entertainmentService).start()
-    Thread(target=run, args=[False]).start()
-    Thread(target=run, args=[True]).start()
-    Thread(target=daylightSensor).start()
-    while True:
-        sleep(10)
-except Exception as e:
-    print("server stopped " + str(e))
-finally:
-    run_service = False
-    saveConfig()
-    print ('config saved')
+    # Make config 
+    bridge_config = BridgeConfig(filename=(kwargs['filename'] or '/opt/hue-emulator/config.json'),
+                                    ip=ip,
+                                    mac=mac)
+    bridge_config.update_config()
+
+    # create emulator, pass in config
+    bridge_emulator = BridgeEmulator(bridge_config)
+
+    # wait for threads to join, catch exceptions
+    try:
+        bridge_emulator.start()
+        bridge_emulator.join_all()
+    except Exception as e:
+        # TODO: on exception, spawn thread to save config backup
+        print('[Main] Exception waiting on join: {}'.format(e))
+    finally:
+        # Clean up, save config
+        run_service = False
+        bridge_config.save()
+        print('[Main] Config saved')
