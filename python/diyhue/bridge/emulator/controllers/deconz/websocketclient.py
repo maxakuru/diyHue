@@ -25,32 +25,32 @@ class WSClientThread(Thread):
 		self.on_open = callbacks['on_open'] if ('on_open' in callbacks) else self._on_open
 
 	def connect(self):
-        #websocket.enableTrace(True)
-        self._socket = websocket.WebSocketApp("ws://{host}:{port}"
-        			.format(host=self._host,port=self._port),
-        			on_message = self.on_message,
-        			on_error = self.on_error,
-        			on_close = self.on_close)
+		#websocket.enableTrace(True)
+		self._socket = websocket.WebSocketApp("ws://{host}:{port}"
+					.format(host=self._host,port=self._port),
+					on_message = self.on_message,
+					on_error = self.on_error,
+					on_close = self.on_close)
 
-        self._socket.on_open = self.on_open
-        self._socket.run_forever()
+		self._socket.on_open = self.on_open
+		self._socket.run_forever()
 
-    def _on_error(self, ws, message):
-        self.logger.error("Error callback fired, message: %s"%message)
+	def _on_error(self, ws, message):
+		self.logger.error("Error callback fired, message: %s"%message)
 
-    def _on_close(self, ws):
-        if self.alive:
-            self.alive = False
-            # TODO: reconnect timer
-            print(("deconz websocket disconnected", code, reason))
+	def _on_close(self, ws):
+		if self.alive:
+			self.alive = False
+			# TODO: reconnect timer
+			print(("deconz websocket disconnected", code, reason))
 			del bridge_config["deconz"]["websocketport"]
 
-    def _on_message(self, ws, message):
-        self.logger.info("Message from websocket server: %s"%message)
+	def _on_message(self, ws, message):
+		self.logger.info("Message from websocket server: %s"%message)
 
-    def _on_open(self, ws):
-        self.alive = True
-        self._socket = ws
+	def _on_open(self, ws):
+		self.alive = True
+		self._socket = ws
 
 	def _on_message(self, m):
 		print(m)

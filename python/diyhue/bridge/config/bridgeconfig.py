@@ -4,21 +4,36 @@ BridgeConfig
 
 import json
 import sys
+from collections import defaultdict
 
 from .confighandler import ConfigHandler
 
-class BridgeConfig(ConfigHandler):
+class BridgeConfig(object):
 	"""
 	Loads config, handles state access, saves state to config.
 	"""
-	def __init__(self, filename='/opt/hue-emulator/config.json'):
-		super().__init__()
-		
-		self.filename = filename
+	def __init__(self, filename=None, ip=None, mac=None):
+		# super().__init__(**{'filename': filename})
 
-		self._state = {}
+		self.filename = filename
+		self._state = defaultdict(lambda:defaultdict(str))
+		self.load()
+
+		self._mac = mac
+		self._ip = ip
+
 		self._sensor_states = {}
 		self._dirty = False
+
+	def __getitem__(self, key):
+		return self._state.__getitem__(key)
+
+	@property
+	def ip(self):
+		return self._ip
+	@property
+	def mac(self):
+		return self._mac
 
 	@property
 	def state(self):
@@ -56,7 +71,7 @@ class BridgeConfig(ConfigHandler):
 		if not filename:
 			filename = self.filename
 		with open(filename, 'w') as fp:
-			json.dump(config, fp, sort_keys=True, indent=4, separators=(',', ': '))
+			json.dump(self._state, fp, sort_keys=True, indent=4, separators=(',', ': '))
 
 	def load(self, filename=None):
 		"""
@@ -67,9 +82,9 @@ class BridgeConfig(ConfigHandler):
 		try:
 			with open(filename, 'r') as fp:
 				self._state = json.load(fp)
-				print("Config loaded")
-		except Exception:
-			print("CRITICAL! Config file was not loaded")
+				print("[BridgeConfig] Config loaded.")
+		except Exception as e:
+			print("[BridgeConfig] CRITICAL! Failed to load config: {}".format(e))
 			sys.exit(1)
 
 	def next_free_id(self, element):

@@ -1,1 +1,1 @@
-from .deconzcontroller import DeconzDontroller
+from .deconzcontroller import DeconzController
