@@ -1,17 +1,45 @@
+import random
+from datetime import datetime
+from urllib.parse import urlparse, parse_qs
+from http.server import BaseHTTPRequestHandler
+from .pages import *
+
 class S(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     server_version = 'nginx'
     sys_version = ''
 
+    def __init__(self, ip, mac, callbacks={}):
+        """
+        Init server and set callbacks, passed in from Emulator.
+
+        Callback keys:
+        "save_config" ->()-> save bridge config
+        "register_mi_light" ->()-> register mi light, return mi light
+        "register_identity" ->(get_params)
+        "scan_tradfri" ->()-> scan for tradfri devices, return list of devices
+        "whitelist_user" ->()-> create a whitelist user is none exist, return ApiKey
+        """
+        self.callbacks = callbacks
+        self.ip = ip
+        self.mac = mac
+
+        self._mimetypes = {"json": "application/json", 
+                        "map": "application/json", 
+                        "html": "text/html", 
+                        "xml": "application/xml", 
+                        "js": "text/javascript", 
+                        "css": "text/css", 
+                        "png": "image/png"}
+
     def _set_headers(self):
         self.send_response(200)
-        mimetypes = {"json": "application/json", "map": "application/json", "html": "text/html", "xml": "application/xml", "js": "text/javascript", "css": "text/css", "png": "image/png"}
         if self.path.endswith((".html",".json",".css",".map",".png",".js", ".xml")):
-            self.send_header('Content-type', mimetypes[self.path.split(".")[-1]])
+            self.send_header('Content-type', self._mimetypes[self.path.split(".")[-1]])
         elif self.path.startswith("/api"):
-            self.send_header('Content-type', mimetypes["json"])
+            self.send_header('Content-type', self._mimetypes["json"])
         else:
-            self.send_header('Content-type', mimetypes["html"])
+            self.send_header('Content-type', self._mimetypes["html"])
 
     def _set_AUTHHEAD(self):
         self.send_response(401)
@@ -25,89 +53,118 @@ class S(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        """
+        Handle GET request.
+        """
+        # / or /index
         if self.path == '/' or self.path == '/index.html':
             self._set_headers()
             f = open('./web-ui/index.html')
             self._set_end_headers(bytes(f.read(), "utf8"))
+        # /debug/clip.html
         elif self.path == "/debug/clip.html":
             self._set_headers()
             f = open('./clip.html', 'rb')
             self._set_end_headers(f.read())
+        # /config.js
         elif self.path == '/config.js':
             self._set_headers()
-            #create a new user key in case none is available
-            if len(bridge_config["config"]["whitelist"]) == 0:
-                bridge_config["config"]["whitelist"]["web-ui-" + str(random.randrange(0, 99999))] = {"create date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),"last use date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),"name": "WegGui User"}
-            self._set_end_headers(bytes('window.config = { API_KEY: "' + list(bridge_config["config"]["whitelist"])[0] + '",};', "utf8"))
+            # Whitelist user
+            api_key = self.callbacks['whitelist_user']()
+            self._set_end_headers(
+                bytes('window.config = { API_KEY: "{}",};'.format(api_key), 
+                        "utf8"))
+        # /___.css/map/png/js
         elif self.path.endswith((".css",".map",".png",".js")):
             self._set_headers()
             f = open('./web-ui' + self.path, 'rb')
             self._set_end_headers(f.read())
+        # /description.xml
         elif self.path == '/description.xml':
             self._set_headers()
-            self._set_end_headers(bytes(description(bridge_config["config"]["ipaddress"], mac), "utf8"))
+            self._set_end_headers(bytes(description(self.ip, self.mac), "utf8"))
+        # /save
         elif self.path == '/save':
             self._set_headers()
-            saveConfig()
-            self._set_end_headers(bytes(json.dumps([{"success":{"configuration":"saved","filename":"/opt/hue-emulator/config.json"}}] ,separators=(',', ':')), "utf8"))
-        elif self.path.startswith("/tradfri"): #setup Tradfri gateway
+            # callback
+            self.callbacks['save_config']()
+            self._set_end_headers(bytes(json.dumps(
+                [{"success":{
+                    "configuration":"saved",
+                    "filename":"/opt/hue-emulator/config.json"
+                    }}],separators=(',', ':')), "utf8"))
+        # /tradfri setup Tradfri gateway
+        elif self.path.startswith("/tradfri"):
             self._set_headers()
             get_parameters = parse_qs(urlparse(self.path).query)
             if "code" in get_parameters:
-                #register new identity
-                new_identity = "Hue-Emulator-" + str(random.randrange(0, 999))
-                registration = json.loads(check_output("./coap-client-linux -m post -u \"Client_identity\" -k \"" + get_parameters["code"][0] + "\" -e '{\"9090\":\"" + new_identity + "\"}' \"coaps://" + get_parameters["ip"][0] + ":5684/15011/9063\"", shell=True).decode('utf-8').split("\n")[3])
-                bridge_config["tradfri"] = {"psk": registration["9091"], "ip": get_parameters["ip"][0], "identity": new_identity}
-                lights_found = scanTradfri()
-                if lights_found == 0:
-                    self._set_end_headers(bytes(webformTradfri() + "<br> No lights where found", "utf8"))
-                else:
-                    self._set_end_headers(bytes(webformTradfri() + "<br> " + str(lights_found) + " lights where found", "utf8"))
+                # Register new Tradfri identity
+                # callback
+                self.callbacks['register_tradfri_identity'](get_parameters)
+
+                # callback
+                lights_found = self.['scan_tradfri']()
+                self._set_end_headers(
+                    bytes(tradfriTemplate(lightsfound), "utf8"))
             else:
-                self._set_end_headers(bytes(webformTradfri(), "utf8"))
-        elif self.path.startswith("/milight"): #setup milight bulb
+                self._set_end_headers(
+                    bytes(tradfriTemplate(), "utf8"))
+        # /milight setup milight bulb
+        elif self.path.startswith("/milight"):
             self._set_headers()
-            get_parameters = parse_qs(urlparse(self.path).query)
+            get_params = parse_qs(urlparse(self.path).query)
             if "device_id" in get_parameters:
-                #register new mi-light
-                new_light_id = nextFreeId("lights")
-                bridge_config["lights"][new_light_id] = {"state": {"on": False, "bri": 200, "hue": 0, "sat": 0, "xy": [0.0, 0.0], "ct": 461, "alert": "none", "effect": "none", "colormode": "ct", "reachable": True}, "type": "Extended color light", "name": "MiLight " + get_parameters["mode"][0] + " " + get_parameters["device_id"][0], "uniqueid": "1a2b3c4" + str(random.randrange(0, 99)), "modelid": "LCT001", "swversion": "66009461"}
-                new_lights.update({new_light_id: {"name": "MiLight " + get_parameters["mode"][0] + " " + get_parameters["device_id"][0]}})
-                bridge_config["lights_address"][new_light_id] = {"device_id": get_parameters["device_id"][0], "mode": get_parameters["mode"][0], "group": int(get_parameters["group"][0]), "ip": get_parameters["ip"][0], "protocol": "milight"}
-                self._set_end_headers(bytes(webform_milight() + "<br> Light added", "utf8"))
+                # Register new mi light
+                # callback
+                milight = self.callbacks['register_mi_light'](get_params)
+                self._set_end_headers(bytes(
+                        milightTemplate("<br> Light added"), "utf8"))
             else:
-                self._set_end_headers(bytes(webform_milight(), "utf8"))
-        elif self.path.startswith("/hue"): #setup hue bridge
-            if "linkbutton" in self.path: #Hub button emulated
-                if self.headers['Authorization'] == None:
+                self._set_end_headers(bytes(
+                        milightTemplate(), "utf8"))
+
+        # /hue -> setup Hue bridge
+        elif self.path.startswith("/hue"):
+            # Hub Sync button emulated
+            if "linkbutton" in self.path:
+                if self.headers['Authorization']==None:
                     self._set_AUTHHEAD()
-                    self._set_end_headers(bytes('You are not authenticated', "utf8"))
-                    pass
-                elif self.headers['Authorization'] == 'Basic ' + bridge_config["linkbutton"]["linkbutton_auth"]:
+                    self._set_end_headers(bytes(
+                            'You are not authenticated', "utf8"))
+                    return
+                # callback
+                auth = self.callbacks['check_auth'](self.headers['Authorization'])
+                if auth:
                     get_parameters = parse_qs(urlparse(self.path).query)
                     if "action=Activate" in self.path:
                         self._set_headers()
-                        bridge_config["config"]["linkbutton"] = False
-                        bridge_config["linkbutton"]["lastlinkbuttonpushed"] = datetime.now().strftime("%s")
-                        saveConfig()
-                        self._set_end_headers(bytes(webform_linkbutton() + "<br> You have 30 sec to connect your device", "utf8"))
+                        self.callbacks["activate_link_button"]()
+                        self._set_end_headers(bytes(
+                            hueTemplate("You have 30 sec to connect your device"), "utf8"))
                     elif "action=Exit" in self.path:
                         self._set_AUTHHEAD()
-                        self._set_end_headers(bytes('You are succesfully disconnected', "utf8"))
+                        self._set_end_headers(bytes(
+                                'You are succesfully disconnected', "utf8"))
                     elif "action=ChangePassword" in self.path:
                         self._set_headers()
-                        tmp_password = str(base64.b64encode(bytes(get_parameters["username"][0] + ":" + get_parameters["password"][0], "utf8"))).split('\'')
-                        bridge_config["linkbutton"]["linkbutton_auth"] = tmp_password[1]
-                        saveConfig()
-                        self._set_end_headers(bytes(webform_linkbutton() + '<br> Your credentials are succesfully change. Please logout then login again', "utf8"))
+                        # callback
+                        success = self.callbacks['change_hue_password']()
+                        if success:
+                            self._set_end_headers(bytes(
+                                hueTemplate('Password changed.'+
+                                    ' Please logout then login again.'), 'utf8'))
+                        else:
+                            self._set_end_headers(bytes(
+                                hueTemplate('Failed to change password.'+
+                                    ' Please try again.'), 'utf8'))
                     else:
                         self._set_headers()
-                        self._set_end_headers(bytes(webform_linkbutton(), "utf8"))
+                        self._set_end_headers(bytes(hueTemplate(), "utf8"))
                     pass
                 else:
                     self._set_AUTHHEAD()
                     self._set_end_headers(bytes(self.headers.headers['Authorization'], "utf8"))
-                    self._set_end_headers(bytes('not authenticated', "utf8"))
+                    self._set_end_headers(bytes('Not authenticated', "utf8"))
                     pass
             else:
                 self._set_headers()

@@ -9,6 +9,10 @@ from .controllers import SchedulerController
 from .controllers import HueController
 from .controllers import DeconzController
 
+from subprocess import check_output
+import random
+import json
+
 _UPDATE_LIGHTS_ON_START = False
 
 class BridgeEmulator(object):
@@ -258,3 +262,133 @@ class BridgeEmulator(object):
 			else:
 				bridge_config["lights"][light]["state"]["reachable"] = True
 				print("LightRequest: " + url)
+
+	def whitelist_user(self):
+		"""
+		Create a whitelist user is none exist, return ApiKey
+		"""
+		raise NotImplementedError
+		# check if whitelist is empty
+		# if len(bridge_config["config"]["whitelist"]) == 0:
+			# create new whitelist entry
+        	# bridge_config["config"]["whitelist"]["web-ui-" + str(random.randrange(0, 99999))] = {"create date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),"last use date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),"name": "WebGui User"}
+        # return apikey
+        # return list(bridge_config["config"]["whitelist"])[0]
+
+	def scan_tradfri(self):
+		"""
+		Scan for tradfri devices, return number of lights found
+		"""
+		raise NotImplementedError
+
+		# return scanTradfri()
+
+	def register_mi_light(self, get_params={}):
+		"""
+		Register new Mi Light.
+
+		:param get_params: GET request query params
+		"""
+		new_light_id = nextFreeId("lights")
+        bridge_config["lights"][new_light_id] = {
+        	"state": {
+        		"on": False, 
+        		"bri": 200, 
+        		"hue": 0, 
+        		"sat": 0, 
+        		"xy": [0.0, 0.0], 
+        		"ct": 461, 
+        		"alert": "none", 
+        		"effect": "none", 
+        		"colormode": "ct", 
+        		"reachable": True }, 
+        	"type": "Extended color light", 
+        	"name": "MiLight {mode} {devid}".format(
+        							mode=get_params["mode"][0], 
+        							devid=get_params["device_id"][0]), 
+        	"uniqueid": "1a2b3c4{}".format(str(random.randrange(0, 99))), 
+        	"modelid": "LCT001", 
+        	"swversion": "66009461" 
+        }
+        new_lights.update({
+        	new_light_id: {"name": "MiLight {mode} {devid}".format(
+        							mode=get_params["mode"][0], 
+        							devid=get_parameters["device_id"][0])
+        	}
+        })
+
+        bridge_config["lights_address"][new_light_id] = {
+        	"device_id": get_params["device_id"][0], 
+        	"mode": get_params["mode"][0], 
+        	"group": int(get_params["group"][0]), 
+        	"ip": get_params["ip"][0], 
+        	"protocol": "milight"
+        }
+		raise NotImplementedError
+
+	def save_config(self):
+		"""
+		"""
+		raise NotImplementedError
+
+	def check_auth(self, auth_header):
+		"""
+		Check if auth header token matches config token.
+		"""
+		return (auth_header=='Basic {}'.format(bridge_config["linkbutton"]["linkbutton_auth"]))
+
+	def register_tradfri_identity(self, get_params={}):
+		"""
+		Register Tradfri identity
+
+		:param get_params: GET request query parameters 
+		"""
+		raise NotImplementedError
+
+		# generate identity
+		new_identity = "Hue-Emulator-" + str(random.randrange(0, 999))
+		# create registration
+        registration = json.loads(
+        	check_output(("./coap-client-linux -m post "+ 
+        		"-u \"Client_identity\" -k \"{}\"".format(get_params["code"][0])+
+        		"-e '{\"9090\":\"{}\"}' ".format(new_identity)+
+        		"\"coaps://{}:5684/15011/9063\"".format(get_params["ip"][0])), 
+        		shell=True).decode('utf-8').split("\n")[3])
+        # update bridge config
+        bridge_config["tradfri"] = {
+        		"psk": registration["9091"], 
+        		"ip": get_params["ip"][0], 
+        		"identity": new_identity }
+
+    def activate_link_button(self):
+    	"""
+    	Activate the Link Button on the Hue Bridge Emulator.
+    	"""
+    	raise NotImplementedError
+    	# set linkbutton
+    	bridge_config["config"]["linkbutton"] = False
+    	# set last pushed
+        bridge_config["linkbutton"]["lastlinkbuttonpushed"] = datetime.now().strftime("%s")
+        # save config
+        self.save_config()
+
+    def change_hue_password(self, get_params={}):
+    	"""
+    	Change linkbutton password.
+
+    	:param get_params: GET request query params
+    	:return: result boolean, True if successful
+    	"""
+    	raise NotImplementedError
+
+    	# set password
+    	try:
+	    	tmp_password = str(base64.b64encode(bytes(
+	    		"{}:{}".format(get_params["username"][0], get_params["password"][0]), 
+	    		"utf8"))).split('\'')
+	        bridge_config["linkbutton"]["linkbutton_auth"] = tmp_password[1]
+	       	# save config
+	       	self.save_config()
+	    except:
+	    	return False
+       	return True

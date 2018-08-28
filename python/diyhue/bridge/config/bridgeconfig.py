@@ -6,15 +6,11 @@ import json
 import sys
 from collections import defaultdict
 
-from .confighandler import ConfigHandler
-
 class BridgeConfig(object):
 	"""
 	Loads config, handles state access, saves state to config.
 	"""
 	def __init__(self, filename=None, ip=None, mac=None):
-		# super().__init__(**{'filename': filename})
-
 		self.filename = filename
 		self._state = defaultdict(lambda:defaultdict(str))
 		self.load()
