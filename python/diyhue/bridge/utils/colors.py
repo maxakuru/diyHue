@@ -1,3 +1,7 @@
+"""
+Utilities with colorspaces
+"""
+
 def convert_rgb_xy(red,green,blue):
     red = pow((red + 0.055) / (1.0 + 0.055), 2.4) if red > 0.04045 else red / 12.92
     green = pow((green + 0.055) / (1.0 + 0.055), 2.4) if green > 0.04045 else green / 12.92

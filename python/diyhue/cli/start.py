@@ -4,5 +4,6 @@ CLI start controller
 """
 from diyhue import main
 
-def start(args):
-	main.start()
+def start(**args):
+	# TODO validate args
+	main.start(**args)

@@ -5,14 +5,26 @@ SchedulerController
 
 from time import sleep
 
-from ..controller import Controller
+from ..controller import ControllerThread
 
-class SchedulerController(Controller):
-	def __init__(self, ip, mac):
+class SchedulerController(ControllerThread):
+	def __init__(self, emulator, ip, mac):
 		super().__init__()
-		self.ip = ip
-		self.mac = mac
+		self._emulator = emulator
+		self._ip = ip
+		self._mac = mac
 		self.alive = True
+
+	@property
+	def emulator(self):
+		return self._emulator
+	@property
+	def ip(self):
+		return self._ip
+	@property
+	def mac(self):
+		return self._mac
+		
 
 	def run(self):
 		"""

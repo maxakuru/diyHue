@@ -9,6 +9,8 @@ def get_parser():
     subparsers = parser.add_subparsers(help='commands', dest='command')
 
     start_parser = subparsers.add_parser('start', help='Start diyHue')
+    start_parser.add_argument('--config', action='store', help='Config file path')
+    start_parser.add_argument('--verbose', action='store', help='Set logging level to verbose')
     start_parser.set_defaults(func=cli_start)
 
     help_parser = subparsers.add_parser('help', help='Show help')
@@ -17,7 +19,8 @@ def get_parser():
 
 def cli_start(args):
     from .start import start
-    start(args)
+    # print(args._get_kwargs())
+    start(**dict(args._get_kwargs()))
 
 def main():
     parser = get_parser()

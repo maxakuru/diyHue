@@ -23,7 +23,8 @@ setup(
                 'diyhue.bridge.emulator.controllers.entertainment',
                 'diyhue.bridge.emulator.controllers.hue',
                 'diyhue.bridge.emulator.controllers.scheduler',
-                'diyhue.bridge.emulator.controllers.ssdp'
+                'diyhue.bridge.emulator.controllers.ssdp',
+                'diyhue.bridge.emulator.protocols'
                 ],
     install_requires=required,
     entry_points = {

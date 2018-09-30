@@ -1,4 +1,4 @@
-from .controller import Controller
+from .controller import ControllerThread, ControllerProcess
 from .ssdp import SSDPController
 from .scheduler import SchedulerController
 from .hue import HueController
