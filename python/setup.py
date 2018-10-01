@@ -1,9 +1,13 @@
 from setuptools import setup
+import subprocess
 
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
 required = []
+
+print('in here')
+subprocess.call(['./gen_cert.sh'])
 
 setup(
     name='diyHue',
@@ -26,6 +30,9 @@ setup(
                 'diyhue.bridge.emulator.controllers.ssdp',
                 'diyhue.bridge.emulator.protocols'
                 ],
+    package_data= {
+                    'diyhue.bridge.server': ['cert.pem', 'nginx.conf']
+                    },
     install_requires=required,
     entry_points = {
         'console_scripts': ['diy=diyhue.cli.main:main']

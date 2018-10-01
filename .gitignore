@@ -3,3 +3,7 @@ __pycache__
 BridgeEmulator/web-ui/public/config.js
 BridgeEmulator/web-ui/public/config.js
 node_modules
+python/dist/
+python/build/
+python/openssl.conf
+python/diyHue.egg-info/

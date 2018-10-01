@@ -8,6 +8,7 @@ from .controllers import EntertainmentController
 from .controllers import SchedulerController
 from .controllers import HueController
 from .controllers import DeconzController
+from ..server import BridgeServer
 from . import protocols as protocols
 
 from subprocess import check_output
@@ -57,6 +58,9 @@ class BridgeEmulator(object):
             self._controllers['entertainment'] = EntertainmentController(emulator=self, 
                                                                         ip=self._ip,
                                                                         mac=self._mac)
+            self._controllers['server'] = BridgeServer(emulator=self, 
+                                                        ip=self._ip,
+                                                        mac=self._mac)
 
             for key in self._controllers:
                 print('[Emulator] Starting controller: {}'.format(key))
@@ -67,8 +71,8 @@ class BridgeEmulator(object):
             # Thread(target=schedulerProcessor).start()
             # Thread(target=syncWithLights).start()
             # Thread(target=entertainmentService).start()
-            # Thread(target=run, args=[False]).start()
-            # Thread(target=run, args=[True]).start()
+            # Thread(target=run, args=[False]).start() done ish
+            # Thread(target=run, args=[True]).start() done ish
             # Thread(target=daylightSensor).start()
             
         except Exception as e:
@@ -131,7 +135,7 @@ class BridgeEmulator(object):
         except Exception as e:
             log.exception('Error sending dgram: {}'.format(e))
 
-    def updateGroupStats(self, light): 
+    def update_group_stats(self, light): 
         """
         Set group stats based on lights status in that group
         """

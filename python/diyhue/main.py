@@ -2,9 +2,9 @@
 from diyhue.bridge.config import BridgeConfig
 from diyhue.bridge.emulator import BridgeEmulator
 from diyhue.bridge.utils import get_mac, get_ip
-
 import os
 from pathlib import Path
+
 _DEFAULT_CONFIG_FILE = '{}/.diyhue/config.json'.format(str(Path.home()))
 print('_DEFAULT_CONFIG_FILE: {}'.format(_DEFAULT_CONFIG_FILE))
 

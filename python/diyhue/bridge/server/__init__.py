@@ -1,1 +1,1 @@
-from .server import S as Server
+from .server import BridgeServer
